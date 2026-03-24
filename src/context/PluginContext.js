@@ -110,7 +110,30 @@ export function PluginProvider({ children }) {
 
       const api = buildPluginAPI(meta.manifest, appContext, storage);
       const result = executePlugin(code, api);
-      setActivePlugins((prev) => ({ ...prev, [meta.id]: { result, meta } }));
+
+      // 🔥 HANDLE ASYNC
+      if (result instanceof Promise) {
+        result
+          .then((resolved) => {
+            setActivePlugins((prev) => ({
+              ...prev,
+              [meta.id]: { result: resolved, meta },
+            }));
+          })
+          .catch((err) => {
+            console.error(`[Plugin: ${meta.manifest.name}] async error`, err);
+            addToast(
+              `Plugin "${meta.manifest.name}" error: ${err.message}`,
+              "error",
+            );
+          });
+      } else {
+        setActivePlugins((prev) => ({
+          ...prev,
+          [meta.id]: { result, meta },
+        }));
+      }
+
       return true;
     } catch (err) {
       console.error(`[Plugin: ${meta.manifest.name}]`, err);
